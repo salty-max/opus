@@ -5,6 +5,7 @@
 #include <doctest/doctest.h>
 
 #include <array>
+#include <cstdint>
 #include <vector>
 
 using opus::Logger;
@@ -26,6 +27,12 @@ TEST_CASE("to_string: names every level") {
     CHECK(opus::to_string(LogLevel::Info) == "info");
     CHECK(opus::to_string(LogLevel::Warn) == "warn");
     CHECK(opus::to_string(LogLevel::Error) == "error");
+}
+
+TEST_CASE("to_string: names out-of-range values unknown") {
+    constexpr auto out_of_range = std::uint8_t{99};
+    // NOLINTNEXTLINE(clang-analyzer-optin.core.EnumCastOutOfRange) out of range on purpose
+    CHECK(opus::to_string(static_cast<LogLevel>(out_of_range)) == "unknown");
 }
 
 TEST_CASE("parse_log_level: round-trips every canonical name") {

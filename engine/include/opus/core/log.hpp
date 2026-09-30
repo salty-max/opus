@@ -18,7 +18,8 @@ enum class LogLevel : std::uint8_t {
     Error, ///< An operation failed.
 };
 
-/// Canonical lowercase name of @p level, e.g. `"warn"`.
+/// Canonical lowercase name of @p level, e.g. `"warn"`; `"unknown"` for a
+/// value outside the enumeration.
 [[nodiscard]] std::string_view to_string(LogLevel level);
 
 /// Why a string could not be parsed as a LogLevel.
