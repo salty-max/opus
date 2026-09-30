@@ -75,25 +75,57 @@ std::optional<std::string> read_file(const fs::path& path) {
     return std::move(contents).str();
 }
 
-// Repository-relative, forward-slash form of @p path; empty when outside the root.
-std::string repo_relative(const fs::path& root, const fs::path& path) {
-    std::error_code error;
-    const fs::path relative = fs::relative(fs::absolute(path, error), fs::absolute(root, error), error);
-    if (error || relative.empty() || *relative.begin() == "..") {
-        return {};
+// Repository-relative, forward-slash form of @p path; nullopt when the path
+// cannot be resolved or lies outside the root.
+std::optional<std::string> repo_relative(const fs::path& root, const fs::path& path) {
+    std::error_code path_error;
+    std::error_code root_error;
+    std::error_code relative_error;
+    const fs::path absolute_path = fs::absolute(path, path_error);
+    const fs::path absolute_root = fs::absolute(root, root_error);
+    const fs::path relative = fs::relative(absolute_path, absolute_root, relative_error);
+    if (path_error || root_error || relative_error || relative.empty() || *relative.begin() == "..") {
+        return std::nullopt;
     }
     return relative.generic_string();
 }
 
-std::vector<std::string> collect_tree(const fs::path& root) {
+// Every file under the scanned roots. A root that does not exist is skipped;
+// any other filesystem error aborts, because a partial scan would pass as clean.
+std::optional<std::vector<std::string>> collect_tree(const fs::path& root) {
     std::vector<std::string> paths;
     for (const std::string_view top : scanned_roots) {
         std::error_code error;
-        fs::recursive_directory_iterator it{root / top, error};
-        for (; !error && it != fs::recursive_directory_iterator{}; it.increment(error)) {
-            if (it->is_regular_file(error)) {
-                paths.push_back(repo_relative(root, it->path()));
+        if (!fs::exists(root / top, error)) {
+            if (error) {
+                std::println(stderr, "opus-lint: cannot access {}: {}", (root / top).string(),
+                             error.message());
+                return std::nullopt;
             }
+            continue;
+        }
+        for (fs::recursive_directory_iterator it{root / top, error}; it != fs::recursive_directory_iterator{};
+             it.increment(error)) {
+            if (error) {
+                break;
+            }
+            const bool regular = it->is_regular_file(error);
+            if (error) {
+                break;
+            }
+            if (!regular) {
+                continue;
+            }
+            std::optional<std::string> path = repo_relative(root, it->path());
+            if (!path) {
+                std::println(stderr, "opus-lint: cannot resolve {}", it->path().string());
+                return std::nullopt;
+            }
+            paths.push_back(*std::move(path));
+        }
+        if (error) {
+            std::println(stderr, "opus-lint: cannot scan {}: {}", (root / top).string(), error.message());
+            return std::nullopt;
         }
     }
     std::ranges::sort(paths);
@@ -112,16 +144,25 @@ int main(int argc, char** argv) {
     const bool whole_tree = options->files.empty();
     std::vector<std::string> paths;
     if (whole_tree) {
-        paths = collect_tree(options->root);
+        std::optional<std::vector<std::string>> tree = collect_tree(options->root);
+        if (!tree) {
+            return exit_usage;
+        }
+        paths = *std::move(tree);
     } else {
         for (const std::string& file : options->files) {
-            paths.push_back(repo_relative(options->root, file));
+            std::optional<std::string> path = repo_relative(options->root, file);
+            if (!path) {
+                std::println(stderr, "opus-lint: {} is not inside {}", file, options->root.string());
+                return exit_usage;
+            }
+            paths.push_back(*std::move(path));
         }
     }
 
     opus::lint::Diagnostics diagnostics;
     for (const std::string& path : paths) {
-        if (path.empty() || !opus::lint::is_lintable(path)) {
+        if (!opus::lint::is_lintable(path)) {
             continue;
         }
         const std::optional<std::string> text = read_file(options->root / path);
