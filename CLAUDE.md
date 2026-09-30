@@ -23,6 +23,7 @@ a "how does X work?" question, before designing a new feature.
 | Doc | Owns |
 |---|---|
 | [`development.md`](docs/development.md) | Toolchain, layout, gates, lint rules, commits, changesets, releases. |
+| [`core.md`](docs/core.md) | The `core` module — logging (`Logger`, `LogLevel`, sinks). |
 | [`determinism.md`](docs/determinism.md) | What simulation code may and may not do, and why. The contract behind the `determinism` lint rule and lockstep networking. |
 
 Each engine module gets its spec (`docs/<module>.md`) in the PR that
