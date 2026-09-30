@@ -19,8 +19,14 @@ branch / commit / changeset conventions, and the release flow.
 | lefthook, convco | git hooks | `brew install lefthook convco` | — | — |
 | actionlint | workflow edits | `brew install actionlint` | — | — |
 
-Homebrew's LLVM is keg-only (not on `PATH`); the build finds its
-`clang-tidy` / `clang-format` under `/opt/homebrew/opt/llvm/bin` itself.
+clang-format and clang-tidy are **pinned to one LLVM major version**
+(`OPUS_LLVM_VERSION` in `cmake/OpusLlvmTools.cmake`, mirrored by
+`LLVM_VERSION` in `ci.yml`): formatting and diagnostics change between
+majors, so configuration fails if only another version is found. The build
+prefers `clang-tidy-23` / `clang-format-23` (Debian and Ubuntu install these
+next to an older unversioned default), then Homebrew's keg-only LLVM under
+`/opt/homebrew/opt/llvm/bin`, then `PATH`. Bumping LLVM means changing both
+constants and reformatting in the same PR.
 
 On Debian/Ubuntu, `scripts/install-linux-deps.sh` installs Ninja and the
 development headers SDL3 builds its Linux backends against (CI runs the same
