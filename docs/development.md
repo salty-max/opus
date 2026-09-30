@@ -111,9 +111,9 @@ target:
 clang-tidy (`.clang-tidy`) enables `bugprone`, `cert`, `clang-analyzer`,
 `concurrency`, `cppcoreguidelines`, `misc` (including `include-cleaner`),
 `modernize`, `performance`, `portability` and `readability`, all as
-errors, minus a short documented list. `tests/.clang-tidy` and
-`tools/lint/.clang-tidy` relax the few checks that fight doctest and
-literal-heavy specs.
+errors, minus a short documented list. The same profile covers every
+first-party file, specs included — doctest is a `SYSTEM` dependency, so its
+macro expansions are not checked.
 
 ---
 

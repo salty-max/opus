@@ -13,7 +13,9 @@ using opus::lint::test::none;
 
 namespace {
 
-const std::vector<std::string> flagged{"1:raw-memory"};
+std::vector<std::string> flagged() {
+    return {"1:raw-memory"};
+}
 
 std::vector<std::string> engine(std::string_view text) {
     return findings(check_raw_memory, "engine/src/a.cpp", text);
@@ -22,12 +24,12 @@ std::vector<std::string> engine(std::string_view text) {
 } // namespace
 
 TEST_CASE("check_raw_memory: flags new, delete and the C allocators") {
-    CHECK(engine("auto* p = new Unit{};") == flagged);
-    CHECK(engine("auto* p = new (storage) Unit;") == flagged);
-    CHECK(engine("delete p;") == flagged);
-    CHECK(engine("delete[] items;") == flagged);
-    CHECK(engine("void* p = malloc(64);") == flagged);
-    CHECK(engine("free(p);") == flagged);
+    CHECK(engine("auto* p = new Unit{};") == flagged());
+    CHECK(engine("auto* p = new (storage) Unit;") == flagged());
+    CHECK(engine("delete p;") == flagged());
+    CHECK(engine("delete[] items;") == flagged());
+    CHECK(engine("void* p = malloc(64);") == flagged());
+    CHECK(engine("free(p);") == flagged());
 }
 
 TEST_CASE("check_raw_memory: allows deleted functions, identifiers and member calls") {
@@ -42,10 +44,10 @@ TEST_CASE("check_raw_memory: does not apply outside the engine") {
 }
 
 TEST_CASE("check_raw_memory: flags new followed by a parenthesised type") {
-    CHECK(engine("auto* p = new(Unit);") == flagged);
+    CHECK(engine("auto* p = new(Unit);") == flagged());
 }
 
 TEST_CASE("check_raw_memory: flags std-qualified C allocation") {
-    CHECK(engine("void* p = std::malloc(8);") == flagged);
-    CHECK(engine("std::free(p);") == flagged);
+    CHECK(engine("void* p = std::malloc(8);") == flagged());
+    CHECK(engine("std::free(p);") == flagged());
 }
