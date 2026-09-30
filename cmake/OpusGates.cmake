@@ -31,7 +31,7 @@ if(OPUS_CLANG_FORMAT_EXE)
 else()
   foreach(target_name IN ITEMS format format-check)
     add_custom_target(${target_name}
-      COMMAND "${CMAKE_COMMAND}" -E echo "clang-format not found; install it (see docs/development.md)"
+      COMMAND "${CMAKE_COMMAND}" -E echo "${OPUS_CLANG_FORMAT_EXE_REASON}; install clang-format ${OPUS_LLVM_VERSION} (see docs/development.md)"
       COMMAND "${CMAKE_COMMAND}" -E false
     )
   endforeach()
