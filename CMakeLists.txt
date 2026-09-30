@@ -24,12 +24,12 @@ set(OPUS_IS_TOP_LEVEL ${PROJECT_IS_TOP_LEVEL})
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 include(OpusCompileOptions)
 include(OpusClangTidy)
+include(OpusDependencies)
 
 add_subdirectory(engine)
 
 if(OPUS_IS_TOP_LEVEL)
   include(CTest)
-  include(OpusDependencies)
   add_subdirectory(tools/lint)
   add_subdirectory(sandbox)
   add_subdirectory(tests)
