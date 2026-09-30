@@ -1,0 +1,68 @@
+name: Changeset check
+
+on:
+  # No `branches` filter: it matches the base, so restricting it to `main`
+  # exempts every PR stacked on another branch.
+  pull_request:
+    types: [opened, synchronize, reopened, edited]
+
+jobs:
+  check:
+    name: Changeset present
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Verify a changeset is added (unless the title is internal-only)
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          set -euo pipefail
+
+          # Internal-only conventional-commit types need no changeset
+          # (docs/development.md "Changesets").
+          case "$PR_TITLE" in
+            chore\(*|chore:*|docs\(*|docs:*|test\(*|test:*|refactor\(*|refactor:*|\
+            ci\(*|ci:*|build\(*|build:*|style\(*|style:*)
+              echo "✅ Title prefix indicates an internal-only change — changeset not required."
+              exit 0
+              ;;
+          esac
+
+          mapfile -t added < <(git diff --name-only --diff-filter=A "$BASE_SHA...HEAD" \
+            | grep -E '^\.changeset/[a-zA-Z0-9_-]+\.md$' \
+            | grep -v '^\.changeset/README\.md$' \
+            || true)
+
+          # A file is not a changeset: scripts/changeset-version.sh parses
+          # these at release time, so a malformed one must fail here, on the
+          # PR that wrote it, rather than when the release is cut.
+          for f in "${added[@]}"; do
+            if ! grep -qE '^bump: (major|minor|patch)$' "$f"; then
+              echo "::error file=$f::missing a 'bump: major|minor|patch' line — see .changeset/README.md"
+              exit 1
+            fi
+          done
+
+          if [[ ${#added[@]} -eq 0 ]]; then
+            cat >&2 <<'EOF'
+          ❌ No changeset added on this branch.
+
+          User-visible changes (feat / fix / perf / breaking refactor) need a
+          changeset entry:
+
+              scripts/changeset-new.sh <major|minor|patch> "<CHANGELOG bullet>"
+
+          If this PR is internal-only (chore / docs / test / refactor / ci /
+          build / style), retitle it with that type — this check skips them.
+
+          See .changeset/README.md for the format.
+          EOF
+            exit 1
+          fi
+
+          echo "✅ Found changeset(s) on this branch:"
+          printf '    %s\n' "${added[@]}"

@@ -1,0 +1,115 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  # Every pull request, whatever it targets. A `branches` filter here
+  # matches the *base*, so restricting it to `main` silently exempts any
+  # PR stacked on another branch.
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  LLVM_VERSION: 23
+  CONVCO_VERSION: v0.7.2
+
+jobs:
+  verify:
+    name: Verify (format, opus-lint, clang-tidy, docs, Debug tests)
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install LLVM ${{ env.LLVM_VERSION }}, Ninja, Doxygen
+        run: |
+          set -euo pipefail
+          wget -qO llvm.sh https://apt.llvm.org/llvm.sh
+          sudo bash llvm.sh "$LLVM_VERSION"
+          sudo apt-get install -y "clang-tidy-$LLVM_VERSION" "clang-format-$LLVM_VERSION" ninja-build doxygen
+      - name: cmake --workflow --preset verify
+        env:
+          CXX: clang++-${{ env.LLVM_VERSION }}
+        run: cmake --workflow --preset verify
+
+  commits:
+    name: Commit messages
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Install convco
+        run: |
+          set -euo pipefail
+          curl -sSfL "https://github.com/convco/convco/releases/download/${CONVCO_VERSION}/convco-x86_64-unknown-linux-musl.tar.gz" \
+            | sudo tar -xz -C /usr/local/bin --strip-components=1 convco-x86_64-unknown-linux-musl/convco
+      # The same script the commit-msg hook runs, so a `--no-verify` commit
+      # cannot slip a scope-less or attributed message into main.
+      - name: Check every commit on the branch
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          set -euo pipefail
+          status=0
+          for sha in $(git rev-list --no-merges "$BASE_SHA..HEAD"); do
+            git log -1 --format=%B "$sha" > msg.txt
+            if ! bash scripts/commit-msg.sh msg.txt; then
+              echo "::error::commit $sha: $(head -n1 msg.txt)"
+              status=1
+            fi
+          done
+          exit "$status"
+
+  test:
+    name: Test (${{ matrix.name }})
+    runs-on: ${{ matrix.os }}
+    env:
+      SKIP_CELL: ${{ matrix.main_only && github.event_name == 'pull_request' }}
+    strategy:
+      fail-fast: false
+      # Linux/GCC carries every build mode; the other toolchains carry the
+      # modes where they diverge most: Debug for behaviour, Release for the
+      # optimiser. Pull requests skip the two slowest Linux cells, pushes to
+      # main run them all.
+      matrix:
+        include:
+          - { name: "linux gcc debug", os: ubuntu-24.04, cxx: g++-14, workflow: test-debug }
+          - { name: "linux gcc release", os: ubuntu-24.04, cxx: g++-14, workflow: test-release }
+          - { name: "linux gcc relwithdebinfo", os: ubuntu-24.04, cxx: g++-14, workflow: test-relwithdebinfo, main_only: true }
+          - { name: "linux gcc minsizerel", os: ubuntu-24.04, cxx: g++-14, workflow: test-minsizerel, main_only: true }
+          - { name: "linux gcc asan+ubsan", os: ubuntu-24.04, cxx: g++-14, workflow: test-asan }
+          - { name: "linux clang debug", os: ubuntu-24.04, cxx: clang++-23, workflow: test-debug, llvm: true }
+          - { name: "macos clang debug", os: macos-15, workflow: test-debug }
+          - { name: "macos clang release", os: macos-15, workflow: test-release }
+          - { name: "macos llvm asan+ubsan", os: macos-15, workflow: test-asan-macos }
+          - { name: "windows msvc debug", os: windows-2022, workflow: test-debug, msvc: true }
+          - { name: "windows msvc release", os: windows-2022, workflow: test-release, msvc: true }
+    steps:
+      - uses: actions/checkout@v4
+        if: env.SKIP_CELL != 'true'
+      - name: Install Ninja (Linux)
+        if: runner.os == 'Linux' && env.SKIP_CELL != 'true'
+        run: sudo apt-get install -y ninja-build
+      - name: Install LLVM (Linux clang cell)
+        if: matrix.llvm && env.SKIP_CELL != 'true'
+        run: |
+          wget -qO llvm.sh https://apt.llvm.org/llvm.sh
+          sudo bash llvm.sh "$LLVM_VERSION"
+      - name: Install Ninja and LLVM (macOS)
+        if: ${{ runner.os == 'macOS' }}
+        run: brew install ninja llvm
+      - name: Install Ninja (Windows)
+        if: ${{ runner.os == 'Windows' }}
+        run: choco install ninja --no-progress
+      - name: MSVC developer environment
+        if: ${{ matrix.msvc }}
+        uses: ilammy/msvc-dev-cmd@v1
+      - name: cmake --workflow --preset ${{ matrix.workflow }}
+        if: env.SKIP_CELL != 'true'
+        shell: bash
+        env:
+          CXX: ${{ matrix.msvc && 'cl' || matrix.cxx }}
+        run: cmake --workflow --preset "${{ matrix.workflow }}"

@@ -1,0 +1,118 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  verify-version:
+    name: Verify version matches tag
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Compare tag to CMakeLists.txt
+        run: |
+          set -euo pipefail
+          tag_version="${GITHUB_REF_NAME#v}"
+          file_version=$({ grep -E '^project\(opus VERSION [0-9]+\.[0-9]+\.[0-9]+ ' CMakeLists.txt || true; } \
+            | head -1 | sed -E 's/^project\(opus VERSION ([0-9.]+) .*/\1/')
+          if [[ -z "$file_version" ]]; then
+            echo "::error::Could not parse project(opus VERSION x.y.z) from CMakeLists.txt"
+            exit 1
+          fi
+          if [[ "$tag_version" != "$file_version" ]]; then
+            echo "::error::Tag $GITHUB_REF_NAME doesn't match CMakeLists.txt version $file_version"
+            exit 1
+          fi
+          echo "✅ Tag $GITHUB_REF_NAME matches CMakeLists.txt version $file_version"
+
+  build:
+    name: Package (${{ matrix.os }})
+    needs: verify-version
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { os: ubuntu-24.04, cxx: g++-14 }
+          - { os: macos-15 }
+          - { os: windows-2022, msvc: true }
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Ninja (Linux)
+        if: ${{ runner.os == 'Linux' }}
+        run: sudo apt-get install -y ninja-build
+      - name: Install Ninja (macOS)
+        if: ${{ runner.os == 'macOS' }}
+        run: brew install ninja
+      - name: Install Ninja (Windows)
+        if: ${{ runner.os == 'Windows' }}
+        run: choco install ninja --no-progress
+      - name: MSVC developer environment
+        if: ${{ matrix.msvc }}
+        uses: ilammy/msvc-dev-cmd@v1
+      # A release ships only what passed its own tests on the packaging host.
+      - name: Build + test (Release)
+        shell: bash
+        env:
+          CXX: ${{ matrix.msvc && 'cl' || matrix.cxx }}
+        run: cmake --workflow --preset test-release
+      - name: Package
+        shell: bash
+        run: cpack --config build/release/CPackConfig.cmake -B dist
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: opus-${{ matrix.os }}
+          path: |
+            dist/*.tar.gz
+            dist/*.zip
+          if-no-files-found: error
+
+  release:
+    name: Publish GitHub Release
+    needs: build
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+      - name: Extract changelog body
+        run: |
+          set -euo pipefail
+          version="${GITHUB_REF_NAME#v}"
+          awk -v want="$version" '
+            /^## v/ {
+              v = $0
+              sub(/^## v/, "", v)
+              sub(/[[:space:]].*$/, "", v)
+              if (v == want) { in_section = 1; next }
+              if (in_section) { exit }
+            }
+            in_section { print }
+          ' CHANGELOG.md > release-notes.md
+          if [[ ! -s release-notes.md ]]; then
+            echo "::error::No CHANGELOG.md entry for v$version; cut releases with scripts/changeset-version.sh"
+            exit 1
+          fi
+          cat release-notes.md
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          artifacts=(dist/*.tar.gz dist/*.zip)
+          if [[ ${#artifacts[@]} -ne 3 ]]; then
+            echo "::error::Expected one package per OS (3), found ${#artifacts[@]}"
+            exit 1
+          fi
+          gh release create "$GITHUB_REF_NAME" --title "$GITHUB_REF_NAME" \
+            --notes-file release-notes.md "${artifacts[@]}"
