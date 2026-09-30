@@ -89,11 +89,13 @@ Xcode Clang 17, CMake, Ninja, Homebrew LLVM 23 (clang-tidy, clang-format), Doxyg
 - Batched sprite renderer (instanced quads), texture atlas packing, sprite animation.
 - Camera with ortho/iso projection, zoom and pan; screen↔world picking.
 - Text rendering (stb_truetype first, MSDF later), debug-draw lines, rects and circles.
+- **Bench gate** (`bench-check`, as in Gero): benchmark harness, committed baselines and a CI gate, landing with sprite batching as the first performance-critical module. Deferred from M1 by maintainer decision: a gate with nothing real to guard is premature.
 
 **M4 — ECS**
 - Generational entity IDs; sparse-set component pools; multi-component views.
 - Deterministic iteration; system scheduler with ordered phases.
 - Snapshot/serialize whole world; world checksum.
+- ECS iteration and query benchmarks join the bench gate, budgeted against the ~500-unit target.
 
 **M5 — Deterministic core**
 - Fixed-point type + vec2, LUT trig/sqrt/atan2, PCG RNG, command queue keyed by tick.
