@@ -171,6 +171,15 @@ above — in the same PR.
 
 ---
 
+## Roadmap and issues
+
+The roadmap is the [Opus project board](https://github.com/users/salty-max/projects/9).
+Its **Phase** field maps each issue to a [`PLAN.md`](../PLAN.md) milestone;
+the plain issue list does not show it. Each issue is one PR-sized unit with
+acceptance criteria, `kind/*` and `area/*` labels, and a `Depends on` list.
+
+---
+
 ## Branches + commits + changesets
 
 **Branches:** `feat/<short>`, `fix/<short>`, `perf/<short>`,

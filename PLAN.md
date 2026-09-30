@@ -1,5 +1,7 @@
 # Opus — 2D RTS-oriented Game Engine (C++23)
 
+Work is tracked as issues on the [Opus project board](https://github.com/users/salty-max/projects/9), grouped by milestone in its **Phase** field.
+
 ## Goals
 
 - **Reusable engine**: a library that games link against, with a clean public API. It is not tied to one game.
@@ -76,7 +78,7 @@ Xcode Clang 17, CMake, Ninja, Homebrew LLVM 23 (clang-tidy, clang-format), Doxyg
 - `engine` lib + `sandbox` + `tests`, doctest via FetchContent, install/CPack packaging.
 - Gates: `quick` / `verify` / `ci`, presets for Debug, RelWithDebInfo, Release, MinSizeRel, ASan/UBSan.
 - `opus-lint` (project rules, determinism rule), strict clang-tidy, Doxygen gate, doc-example compile gate, clang-format.
-- Hooks, commit convention, changesets, CI / changeset-check / release workflows (GitHub repo pending).
+- Hooks, commit convention, changesets, CI / changeset-check / release workflows.
 - First module: `core/log` (`Logger`, `LogLevel`, `std::expected` parsing).
 
 **M2 — Platform & main loop**
