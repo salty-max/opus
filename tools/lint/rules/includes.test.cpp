@@ -37,3 +37,11 @@ TEST_CASE("check_includes: tests include only util.hpp by quotes") {
 TEST_CASE("check_includes: engine sources may quote private headers") {
     CHECK(findings(check_includes, "engine/src/render/a.cpp", R"(#include "render/internal.hpp")") == none);
 }
+
+TEST_CASE("check_includes: public headers never include SDL") {
+    CHECK(findings(check_includes, "engine/include/opus/platform/window.hpp", "#include <SDL3/SDL.h>") ==
+          flagged());
+    CHECK(findings(check_includes, "engine/include/opus/platform/window.hpp", R"(#include "SDL3/SDL.h")") ==
+          flagged());
+    CHECK(findings(check_includes, "engine/src/platform/window.cpp", "#include <SDL3/SDL.h>") == none);
+}

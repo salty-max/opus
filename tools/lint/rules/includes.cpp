@@ -11,8 +11,15 @@ namespace opus::lint {
 
 Diagnostics check_includes(const SourceFile& file) {
     static const std::regex quoted_include{R"re(^\s*#\s*include\s*"([^"]*)")re"};
+    static const std::regex sdl_include{R"re(^\s*#\s*include\s*[<"]SDL)re"};
     Diagnostics out;
     for (std::size_t i = 0; i < file.lines.size(); ++i) {
+        // SDL is a private dependency of the engine; games never see it.
+        if (is_public_header(file.path) && std::regex_search(file.lines[i].raw, sdl_include)) {
+            detail::report(file, i, "include-path",
+                           "public headers never include SDL; keep platform types behind engine/src", out);
+            continue;
+        }
         std::smatch match;
         if (!std::regex_search(file.lines[i].raw, match, quoted_include)) {
             continue;

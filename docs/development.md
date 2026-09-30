@@ -150,7 +150,7 @@ skips them.
 |---|---|---|
 | `comment-content` | everywhere | issue numbers, version / milestone / roadmap markers, change-history narration, AI attribution — in comments |
 | `cast-safety` | everywhere | `reinterpret_cast`, `const_cast`, `std::bit_cast`, `std::launder` without `// safety: <reason>` directly above |
-| `include-path` | everywhere | `#include "../…"`; quoted includes in public headers; quoted includes other than `"util.hpp"` in `tests/` |
+| `include-path` | everywhere | `#include "../…"`; quoted includes in public headers; SDL includes in public headers; quoted includes other than `"util.hpp"` in `tests/` |
 | `engine-io` | `engine/` | `std::cout`/`cerr`/`print`, `printf`-family output, any `stdout`/`stderr`, `<iostream>`/`<print>` |
 | `raw-memory` | `engine/` | `new`, `delete`, `malloc`/`calloc`/`realloc`/`free` |
 | `determinism` | `ecs`, `sim`, `world`, `rts` | `float`/`double`, libm calls, `std::unordered_*`, clocks, platform RNGs and `<random>` distributions, unstable sorts, and their headers |
@@ -168,6 +168,29 @@ multi-line comment block whose first line carries the marker counts).
 Adding a rule: one file in `tools/lint/rules/`, its spec beside it, the
 function in `rules.hpp`, the entry in `lint.cpp`, and a row in the table
 above — in the same PR.
+
+---
+
+## Third-party dependencies
+
+Declared in `cmake/OpusDependencies.cmake`, in two groups: **engine**
+dependencies, fetched for every consumer of the library, and **development**
+dependencies, fetched only when Opus is the top-level project.
+
+- **Pinned by content.** Release tarballs carry a `URL_HASH SHA256=…`; git
+  sources name an exact tag.
+- **Outside the gates.** Third-party targets get neither clang-tidy nor the
+  first-party warning policy, and their headers are `SYSTEM`.
+- **Private to the engine.** Engine dependencies link `PRIVATE`; no
+  third-party header appears under `engine/include/opus/` (opus-lint
+  enforces it for SDL).
+- **Packaged.** The installed `opusConfig.cmake` calls `find_dependency` for
+  each engine dependency, the dependency is installed alongside the engine,
+  and its license file ships under `share/licenses/opus/`. The
+  `opusConfig` ctest installs the engine and builds a `find_package(opus)`
+  consumer against it, so a broken package fails the test suite.
+- **Recorded.** Each dependency gets a row in
+  [`THIRD_PARTY.md`](../THIRD_PARTY.md) in the PR that adds it.
 
 ---
 

@@ -9,3 +9,15 @@ target_link_libraries(opus-tests PRIVATE opus::opus doctest::doctest)
 opus_apply_compile_options(opus-tests ALLOW_EXCEPTIONS)
 
 doctest_discover_tests(opus-tests)
+
+add_test(NAME "opusConfig: a find_package consumer builds and runs"
+  COMMAND "${CMAKE_COMMAND}"
+    "-DBUILD_DIR=${PROJECT_BINARY_DIR}"
+    "-DCONFIG=$<CONFIG>"
+    "-DSOURCE=${CMAKE_CURRENT_SOURCE_DIR}/package"
+    "-DWORK=${CMAKE_CURRENT_BINARY_DIR}/package"
+    "-DCXX=${CMAKE_CXX_COMPILER}"
+    "-DGENERATOR=${CMAKE_GENERATOR}"
+    "-DSANITIZE=${OPUS_SANITIZE}"
+    -P "${PROJECT_SOURCE_DIR}/cmake/scripts/package-test.cmake"
+)
