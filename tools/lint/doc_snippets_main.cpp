@@ -40,8 +40,11 @@ std::optional<Options> parse_options(std::span<char*> args) {
     Options options;
     for (std::size_t i = 1; i < args.size(); ++i) {
         const std::string_view arg = args[i];
-        if ((arg == "--root" || arg == "--out") && i + 1 < args.size()) {
-            (arg == "--root" ? options.root : options.out) = args[++i];
+        const bool has_value = i + 1 < args.size();
+        if (arg == "--root" && has_value) {
+            options.root = args[++i];
+        } else if (arg == "--out" && has_value) {
+            options.out = args[++i];
         } else if (arg.starts_with('-')) {
             return std::nullopt;
         } else {
