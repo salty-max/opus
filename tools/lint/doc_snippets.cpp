@@ -4,10 +4,8 @@
 
 #include <cstddef>
 #include <format>
-#include <optional>
 #include <string>
 #include <string_view>
-#include <utility>
 #include <vector>
 
 namespace opus::lint {
@@ -28,7 +26,8 @@ bool is_fragment(const Snippet& snippet) {
 
 std::vector<Snippet> extract_cpp_snippets(std::string_view markdown) {
     std::vector<Snippet> snippets;
-    std::optional<Snippet> open;
+    Snippet current{};
+    bool in_block = false;
     std::size_t line_number = 0;
     while (!markdown.empty()) {
         const std::size_t newline = markdown.find('\n');
@@ -40,18 +39,19 @@ std::vector<Snippet> extract_cpp_snippets(std::string_view markdown) {
         }
 
         const std::string_view marker = trim(line);
-        if (!open) {
+        if (!in_block) {
             if (marker == cpp_fence) {
-                open = Snippet{.line = line_number + 1, .code = {}};
+                current = Snippet{.line = line_number + 1, .code = {}};
+                in_block = true;
             }
         } else if (marker.starts_with(fence)) {
-            if (!is_fragment(*open)) {
-                snippets.push_back(*std::move(open));
+            in_block = false;
+            if (!is_fragment(current)) {
+                snippets.push_back(current);
             }
-            open.reset();
         } else {
-            open->code += line;
-            open->code += '\n';
+            current.code += line;
+            current.code += '\n';
         }
     }
     return snippets;
