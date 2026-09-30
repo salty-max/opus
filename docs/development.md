@@ -22,6 +22,10 @@ branch / commit / changeset conventions, and the release flow.
 Homebrew's LLVM is keg-only (not on `PATH`); the build finds its
 `clang-tidy` / `clang-format` under `/opt/homebrew/opt/llvm/bin` itself.
 
+On Debian/Ubuntu, `scripts/install-linux-deps.sh` installs Ninja and the
+development headers SDL3 builds its Linux backends against (CI runs the same
+script).
+
 After cloning, once:
 
 ```bash

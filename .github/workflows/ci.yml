@@ -22,12 +22,13 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
-      - name: Install LLVM ${{ env.LLVM_VERSION }}, Ninja, Doxygen
+      - name: Install LLVM ${{ env.LLVM_VERSION }}, Doxygen, build dependencies
         run: |
           set -euo pipefail
           wget -qO llvm.sh https://apt.llvm.org/llvm.sh
           sudo bash llvm.sh "$LLVM_VERSION"
-          sudo apt-get install -y "clang-tidy-$LLVM_VERSION" "clang-format-$LLVM_VERSION" ninja-build doxygen
+          sudo apt-get install -y "clang-tidy-$LLVM_VERSION" "clang-format-$LLVM_VERSION" doxygen
+          bash scripts/install-linux-deps.sh
       - name: cmake --workflow --preset verify
         env:
           CXX: clang++-${{ env.LLVM_VERSION }}
@@ -90,9 +91,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         if: env.SKIP_CELL != 'true'
-      - name: Install Ninja (Linux)
+      - name: Install build dependencies (Linux)
         if: runner.os == 'Linux' && env.SKIP_CELL != 'true'
-        run: sudo apt-get install -y ninja-build
+        run: bash scripts/install-linux-deps.sh
       - name: Install LLVM (Linux clang cell)
         if: matrix.llvm && env.SKIP_CELL != 'true'
         run: |
