@@ -58,3 +58,10 @@ TEST_CASE("check_determinism: covers every simulation module and nothing else") 
     CHECK(findings(check_determinism, "engine/src/rts/orders.cpp", "float f;") == flagged);
     CHECK(findings(check_determinism, "engine/src/render/camera.cpp", "float f;") == none);
 }
+
+TEST_CASE("check_determinism: flags std-qualified C clocks and RNGs") {
+    CHECK(sim("auto t = std::time(nullptr);") == flagged);
+    CHECK(sim("auto c = std::clock();") == flagged);
+    CHECK(sim("int r = std::rand();") == flagged);
+    CHECK(sim("std::srand(seed);") == flagged);
+}

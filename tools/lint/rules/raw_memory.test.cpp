@@ -44,3 +44,8 @@ TEST_CASE("check_raw_memory: does not apply outside the engine") {
 TEST_CASE("check_raw_memory: flags new followed by a parenthesised type") {
     CHECK(engine("auto* p = new(Unit);") == flagged);
 }
+
+TEST_CASE("check_raw_memory: flags std-qualified C allocation") {
+    CHECK(engine("void* p = std::malloc(8);") == flagged);
+    CHECK(engine("std::free(p);") == flagged);
+}

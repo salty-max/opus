@@ -20,10 +20,10 @@ Diagnostics check_determinism(const SourceFile& file) {
             "libm call in a simulation module; use opus fixed-point math"),
         pattern(R"(std::unordered_\w+)", "unordered container in a simulation module; its iteration order "
                                          "differs across standard libraries"),
-        pattern(R"(std::chrono|(^|[^\w.>:])(time|clock)\s*\()",
+        pattern(R"(std::chrono|std::(time|clock)\b|(^|[^\w.>:])(time|clock)\s*\()",
                 "clock read in a simulation module; simulation time is the tick counter"),
         pattern(
-            R"((^|[^\w.>:])s?rand\s*\(|std::(random_device|mt19937\w*|minstd_rand\w*|default_random_engine|\w+_distribution)\b)",
+            R"((^|[^\w.>:])s?rand\s*\(|std::(s?rand|random_device|mt19937\w*|minstd_rand\w*|default_random_engine|\w+_distribution)\b)",
             "platform RNG in a simulation module; use the seeded simulation RNG"),
         pattern(R"(std::(ranges::)?(sort|partial_sort|nth_element)\b)",
                 "unstable sort in a simulation module; equal elements land differently across standard "

@@ -18,7 +18,7 @@ Diagnostics check_raw_memory(const SourceFile& file) {
                 "raw `new`; own memory through containers, std::unique_ptr or an allocator"),
         pattern(R"(\bdelete\s*(\[\s*\])?\s*[\w(*:])",
                 "raw `delete`; own memory through containers, std::unique_ptr or an allocator"),
-        pattern(R"((^|[^\w.>:])(malloc|calloc|realloc|free)\s*\()",
+        pattern(R"(std::(malloc|calloc|realloc|free)\b|(^|[^\w.>:])(malloc|calloc|realloc|free)\s*\()",
                 "C allocation; own memory through containers, std::unique_ptr or an allocator"),
     };
     detail::report_matches(file, "raw-memory", detail::Field::Code, patterns, out);
