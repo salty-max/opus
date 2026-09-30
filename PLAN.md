@@ -75,7 +75,7 @@ Xcode Clang 17, CMake, Ninja, Homebrew LLVM 23 (clang-tidy, clang-format), Doxyg
 **M1 — Project skeleton & process** ✅
 - `engine` lib + `sandbox` + `tests`, doctest via FetchContent, install/CPack packaging.
 - Gates: `quick` / `verify` / `ci`, presets for Debug, RelWithDebInfo, Release, MinSizeRel, ASan/UBSan.
-- `opus-lint` (project rules, determinism rule), strict clang-tidy, Doxygen gate, clang-format.
+- `opus-lint` (project rules, determinism rule), strict clang-tidy, Doxygen gate, doc-example compile gate, clang-format.
 - Hooks, commit convention, changesets, CI / changeset-check / release workflows (GitHub repo pending).
 - First module: `core/log` (`Logger`, `LogLevel`, `std::expected` parsing).
 
