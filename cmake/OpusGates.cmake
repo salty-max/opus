@@ -5,6 +5,7 @@
 #   format-check  fail if any file is not clang-format clean
 #   lint          opus-lint over the whole tree (layout rules included)
 #   docs          Doxygen API reference; any undocumented public symbol fails
+#   check-doc-cpp every ```cpp block in docs/ and README.md compiles
 #   run           build and launch the sandbox
 
 set(OPUS_FORMAT_DIRS engine tests sandbox tools)
@@ -62,6 +63,21 @@ else()
     COMMAND "${CMAKE_COMMAND}" -E false
   )
 endif()
+
+add_custom_target(check-doc-cpp
+  COMMAND "${CMAKE_COMMAND}"
+    "-DEXTRACT=$<TARGET_FILE:opus-doc-snippets>"
+    "-DCXX=${CMAKE_CXX_COMPILER}"
+    "-DMSVC_STYLE=${MSVC}"
+    "-DSYSROOT=${CMAKE_OSX_SYSROOT}"
+    "-DROOT=${PROJECT_SOURCE_DIR}"
+    "-DOUT=${PROJECT_BINARY_DIR}/doc-snippets"
+    "-DINCLUDES=${PROJECT_SOURCE_DIR}/engine/include|${OPUS_GENERATED_INCLUDE_DIR}"
+    -P "${PROJECT_SOURCE_DIR}/cmake/scripts/check-doc-cpp.cmake"
+  DEPENDS opus-doc-snippets
+  COMMENT "Compiling the C++ examples in the docs"
+  VERBATIM
+)
 
 add_custom_target(run
   COMMAND $<TARGET_FILE:opus-sandbox>

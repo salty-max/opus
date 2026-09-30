@@ -129,7 +129,8 @@
       "targets": [
         "format-check",
         "lint",
-        "docs"
+        "docs",
+        "check-doc-cpp"
       ]
     }
   ],

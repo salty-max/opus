@@ -55,7 +55,7 @@ tests/
 ├── opus.test.cpp          # barrel smoke test
 └── <module>/<f>.test.cpp  # mirrors engine/{include/opus,src}/<module>/<f>
 sandbox/                   # sample game used during development
-tools/lint/                # opus-lint; its specs sit beside its sources
+tools/lint/                # opus-lint + opus-doc-snippets; specs sit beside their sources
 cmake/                     # compile policy, deps, gates, ci driver
 docs/                      # specs + this file
 scripts/                   # hook + changeset helpers
@@ -77,7 +77,7 @@ Three layered gates, all plain CMake so they run identically on every OS.
 | Gate | Command | Runs |
 |---|---|---|
 | quick | `cmake --workflow --preset quick` | clang-format check, Debug build, all tests |
-| verify | `cmake --workflow --preset verify` | quick + opus-lint (whole tree) + clang-tidy on every TU + Doxygen with warnings as errors |
+| verify | `cmake --workflow --preset verify` | quick + opus-lint (whole tree) + clang-tidy on every TU + Doxygen with warnings as errors + doc examples compile |
 | ci | `cmake -P cmake/ci.cmake` | verify + RelWithDebInfo + Release + MinSizeRel + ASan/UBSan |
 
 `verify` builds in `build/verify` with clang-tidy wired into compilation,
@@ -88,11 +88,33 @@ so re-runs only re-check what changed. Individual targets:
 | `format` / `format-check` | apply / check clang-format over engine, tests, sandbox, tools |
 | `lint` | opus-lint over the whole tree |
 | `docs` | Doxygen HTML into `build/<preset>/docs/html` |
+| `check-doc-cpp` | compile every ```` ```cpp ```` block in `docs/` and `README.md` |
 | `run` | build and launch the sandbox |
 
 GitHub Actions runs `verify` on Linux (Clang 23), the test workflows
 across GCC / Clang / Apple Clang / MSVC and every build mode, a
 sanitizer lane on Linux and macOS, and a commit-message check on PRs.
+
+---
+
+## Documentation gate
+
+`check-doc-cpp` (part of `verify`) compiles every ```` ```cpp ```` block in
+`docs/**/*.md` and `README.md` against the public headers, with warnings as
+errors. A spec example is what a reader copies — one that no longer compiles
+teaches a wrong API silently. `opus-doc-snippets` extracts the blocks with a
+`#line` directive, so a failure points at the Markdown line.
+
+**Only tagged blocks are checked.** An untagged fence is prose (a signature
+table, a directory tree) and is skipped; tag a block ```` ```cpp ```` when it
+is C++, which also gives it highlighting.
+
+A block that genuinely cannot stand alone — an elided body (`...`), a form
+the section documents *as* an error — starts with `// fragment: <why>`. If a
+block fails because the API changed under it, fix the block.
+
+Doxygen `@code` examples in headers are fragments by nature and are not
+compiled; keep them short and let the specs carry full programs.
 
 ---
 

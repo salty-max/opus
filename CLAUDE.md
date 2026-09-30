@@ -297,7 +297,8 @@ cmake --workflow --preset quick    # inner loop — format check + Debug build +
 
 cmake --workflow --preset verify   # pre-push — quick + opus-lint + clang-tidy
                                    # (strict, warnings are errors) + Doxygen
-                                   # (undocumented public API fails).
+                                   # (undocumented public API fails) + every
+                                   # ```cpp block in docs/ compiles.
                                    # REQUIRED green before pushing.
 
 cmake -P cmake/ci.cmake            # full local matrix — verify + RelWithDebInfo
