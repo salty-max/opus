@@ -50,5 +50,8 @@ if(OPUS_IS_TOP_LEVEL)
   set(CMAKE_WARN_DEPRECATED OFF CACHE BOOL "" FORCE)
   opus_make_available_third_party(doctest)
   set(CMAKE_WARN_DEPRECATED ${_opus_warn_deprecated} CACHE BOOL "" FORCE)
+  # Without it doctest forward-declares std::ostream on every standard
+  # library but libc++, and MSVC then cannot print a failed string_view check.
+  target_compile_definitions(doctest INTERFACE DOCTEST_CONFIG_USE_STD_HEADERS)
   include("${doctest_SOURCE_DIR}/scripts/cmake/doctest.cmake")
 endif()
