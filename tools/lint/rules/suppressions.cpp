@@ -13,6 +13,7 @@ namespace opus::lint {
 Diagnostics check_suppressions(const SourceFile& file) {
     static const std::regex nolint{R"(\bNOLINT(NEXTLINE|BEGIN)?\b)"};
     static const std::regex nolint_with_reason{R"(\bNOLINT(NEXTLINE|BEGIN)?\([^)]+\)\s*\S)"};
+    static const std::regex nolint_next_line{R"(\bNOLINTNEXTLINE\b)"};
     static const std::regex allow_strict{R"(\ballow-strict:)"};
     static const std::regex allow_strict_with_reason{R"(\ballow-strict:\s*\S)"};
     Diagnostics out;
@@ -21,6 +22,14 @@ Diagnostics check_suppressions(const SourceFile& file) {
         if (std::regex_search(comment, nolint) && !std::regex_search(comment, nolint_with_reason)) {
             detail::report(file, i, "suppression",
                            "NOLINT must name its checks and give a reason: `NOLINT(check) reason`", out);
+        }
+        // A wrapped reason pushes the code a line further down, out of reach.
+        const bool next_line_is_code = i + 1 < file.lines.size() && !trim(file.lines[i + 1].code).empty();
+        if (std::regex_search(comment, nolint_next_line) && !next_line_is_code) {
+            detail::report(file, i, "suppression",
+                           "NOLINTNEXTLINE must sit directly above the code it suppresses; keep its reason "
+                           "on one line",
+                           out);
         }
         if (std::regex_search(comment, allow_strict) &&
             !std::regex_search(comment, allow_strict_with_reason)) {

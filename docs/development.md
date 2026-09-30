@@ -133,7 +133,7 @@ skips them.
 | `raw-memory` | `engine/` | `new`, `delete`, `malloc`/`calloc`/`realloc`/`free` |
 | `determinism` | `ecs`, `sim`, `world`, `rts` | `float`/`double`, libm calls, `std::unordered_*`, clocks, platform RNGs and `<random>` distributions, unstable sorts, and their headers |
 | `test-name` | `*.test.cpp` | `TEST_CASE` not named `"<symbol>: <behavior>"` on one line |
-| `suppression` | everywhere | clang-tidy suppressions without check names and a reason; `allow-strict:` without a reason |
+| `suppression` | everywhere | clang-tidy suppressions without check names and a reason; a next-line suppression not directly above code (a wrapped reason pushes the code out of reach); `allow-strict:` without a reason |
 | `warning-pragma` | everywhere | `#pragma … diagnostic ignored` / `warning(disable…)` |
 | `pragma-once` | headers | missing `#pragma once` |
 | `mirror` | tree | engine file without its spec; spec without its engine file |

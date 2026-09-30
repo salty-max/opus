@@ -25,9 +25,9 @@ TEST_CASE("check_suppressions: a clang-tidy suppression needs checks and a reaso
     CHECK(check("f(); // NO"
                 "LINT") == std::vector<std::string>{"1:suppression"});
     CHECK(check("// NO"
-                "LINTNEXTLINE(bugprone-x)") == std::vector<std::string>{"1:suppression"});
+                "LINTNEXTLINE(bugprone-x)\nf();") == std::vector<std::string>{"1:suppression"});
     CHECK(check("// NO"
-                "LINTNEXTLINE(bugprone-x) SDL owns this pointer") == none);
+                "LINTNEXTLINE(bugprone-x) SDL owns this pointer\nf();") == none);
     CHECK(check("// NO"
                 "LINTEND(bugprone-x)") == none);
 }
@@ -44,4 +44,15 @@ TEST_CASE("check_suppressions: flags warning-silencing pragmas") {
           std::vector<std::string>{"1:warning-pragma"});
     CHECK(check("#pragma warning(disable: 4100)") == std::vector<std::string>{"1:warning-pragma"});
     CHECK(check("#pragma clang diagnostic push") == none);
+}
+
+TEST_CASE("check_suppressions: a next-line suppression must be followed by code") {
+    CHECK(check("// NO"
+                "LINTNEXTLINE(bugprone-x) reason that wraps\n"
+                "// onto a second line\n"
+                "f();\n") == std::vector<std::string>{"1:suppression"});
+    CHECK(check("// NO"
+                "LINTNEXTLINE(bugprone-x) reason\n") == std::vector<std::string>{"1:suppression"});
+    CHECK(check("// NO"
+                "LINTNEXTLINE(bugprone-x) reason\nf();\n") == none);
 }
