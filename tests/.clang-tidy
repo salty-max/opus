@@ -1,0 +1,10 @@
+# Specs assert on literal values and keep static fixture tables, and
+# doctest's macros expand into code the strict profile would reject.
+InheritParentConfig: true
+Checks: >
+  -bugprone-throwing-static-initialization,
+  -readability-magic-numbers,
+  -cppcoreguidelines-avoid-do-while,
+  -cert-err33-c,
+  -misc-use-internal-linkage,
+  -readability-function-size

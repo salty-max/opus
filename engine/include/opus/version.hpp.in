@@ -1,0 +1,16 @@
+#pragma once
+
+#include <string_view>
+
+namespace opus {
+
+/// Major component of the engine version.
+inline constexpr int version_major = @PROJECT_VERSION_MAJOR@;
+/// Minor component of the engine version.
+inline constexpr int version_minor = @PROJECT_VERSION_MINOR@;
+/// Patch component of the engine version.
+inline constexpr int version_patch = @PROJECT_VERSION_PATCH@;
+/// Full engine version as `major.minor.patch`.
+inline constexpr std::string_view version_string = "@PROJECT_VERSION@";
+
+} // namespace opus
