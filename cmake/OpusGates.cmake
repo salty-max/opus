@@ -10,10 +10,7 @@
 
 set(OPUS_FORMAT_DIRS engine tests sandbox tools)
 
-find_program(OPUS_CLANG_FORMAT_EXE
-  NAMES clang-format clang-format-23
-  HINTS /opt/homebrew/opt/llvm/bin /usr/local/opt/llvm/bin
-)
+opus_find_llvm_tool(OPUS_CLANG_FORMAT_EXE clang-format)
 if(OPUS_CLANG_FORMAT_EXE)
   foreach(mode IN ITEMS fix check)
     set(target_name format)

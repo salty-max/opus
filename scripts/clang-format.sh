@@ -1,12 +1,19 @@
 #!/usr/bin/env bash
-# Runs the same clang-format the CMake `format` targets find, so the hook and
-# the gate never disagree about formatting.
+# Runs clang-format from the LLVM version the build pins
+# (OPUS_LLVM_VERSION in cmake/OpusLlvmTools.cmake), searched in the same order
+# as the CMake `format` targets, so the hook and the gate never disagree.
 set -euo pipefail
 
-for candidate in clang-format clang-format-23 /opt/homebrew/opt/llvm/bin/clang-format /usr/local/opt/llvm/bin/clang-format; do
+root="$(cd "$(dirname "$0")/.." && pwd)"
+pinned="$(sed -nE 's/^set\(OPUS_LLVM_VERSION ([0-9]+)\)$/\1/p' "$root/cmake/OpusLlvmTools.cmake")"
+
+for candidate in "clang-format-$pinned" /opt/homebrew/opt/llvm/bin/clang-format /usr/local/opt/llvm/bin/clang-format clang-format; do
   if command -v "$candidate" > /dev/null 2>&1; then
-    exec "$candidate" "$@"
+    version="$("$candidate" --version | sed -nE 's/.*version ([0-9]+)\..*/\1/p')"
+    if [[ "$version" == "$pinned" ]]; then
+      exec "$candidate" "$@"
+    fi
   fi
 done
-echo "clang-format not found; see docs/development.md" >&2
+echo "clang-format $pinned not found; see docs/development.md" >&2
 exit 1

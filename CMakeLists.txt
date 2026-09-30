@@ -23,6 +23,7 @@ set(OPUS_IS_TOP_LEVEL ${PROJECT_IS_TOP_LEVEL})
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 include(OpusCompileOptions)
+include(OpusLlvmTools)
 include(OpusClangTidy)
 include(OpusDependencies)
 
