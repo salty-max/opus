@@ -1,0 +1,4 @@
+{
+  "scopeRegex": "^(core|platform|render|ecs|sim|world|rts|script|audio|net|ui|devtools|sandbox|editor|shaders|tooling|ci|docs|meta|(core|platform|render|ecs|sim|world|rts|script|audio|net|ui|devtools)/[a-z][a-z0-9-]*)$",
+  "lineLength": 100
+}

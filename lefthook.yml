@@ -1,0 +1,28 @@
+# Git hooks managed by lefthook (`lefthook install` once per clone).
+#
+#   commit-msg → conventional commit with a mandatory scope, no AI attribution
+#   pre-commit → clang-format + opus-lint on the staged C++ files
+#   pre-push   → the full `verify` gate
+#
+# Bypass with --no-verify only with a justified reason in the PR description.
+
+commit-msg:
+  commands:
+    convco:
+      run: bash scripts/commit-msg.sh {1}
+
+pre-commit:
+  parallel: true
+  commands:
+    format:
+      glob: "*.{cpp,hpp}"
+      run: bash scripts/clang-format.sh --dry-run -Werror {staged_files}
+    lint:
+      glob: "*.{cpp,hpp,h,hpp.in}"
+      # Per-file mode skips the tree-level layout rules; pre-push runs them.
+      run: cmake --preset debug > /dev/null && cmake --build --preset debug --target opus-lint > /dev/null && build/debug/tools/lint/opus-lint --root . {staged_files}
+
+pre-push:
+  commands:
+    verify:
+      run: cmake --workflow --preset verify
