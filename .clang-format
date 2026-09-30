@@ -1,0 +1,10 @@
+BasedOnStyle: LLVM
+IndentWidth: 4
+ColumnLimit: 110
+AccessModifierOffset: -4
+AllowShortFunctionsOnASingleLine: InlineOnly
+AllowShortLambdasOnASingleLine: Inline
+IncludeBlocks: Preserve
+PointerAlignment: Left
+SpaceBeforeCpp11BracedList: false
+InsertNewlineAtEOF: true

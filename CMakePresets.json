@@ -1,0 +1,333 @@
+{
+  "version": 6,
+  "cmakeMinimumRequired": {
+    "major": 3,
+    "minor": 28,
+    "patch": 0
+  },
+  "configurePresets": [
+    {
+      "name": "base",
+      "hidden": true,
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/${presetName}",
+      "cacheVariables": {
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"
+      }
+    },
+    {
+      "name": "debug",
+      "inherits": "base",
+      "displayName": "Debug",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug"
+      }
+    },
+    {
+      "name": "relwithdebinfo",
+      "inherits": "base",
+      "displayName": "RelWithDebInfo",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "RelWithDebInfo"
+      }
+    },
+    {
+      "name": "release",
+      "inherits": "base",
+      "displayName": "Release",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release"
+      }
+    },
+    {
+      "name": "minsizerel",
+      "inherits": "base",
+      "displayName": "MinSizeRel",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "MinSizeRel"
+      }
+    },
+    {
+      "name": "asan",
+      "inherits": "base",
+      "displayName": "Debug + ASan/UBSan",
+      "condition": {
+        "type": "notEquals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Darwin"
+      },
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "OPUS_SANITIZE": "address,undefined"
+      }
+    },
+    {
+      "name": "asan-macos",
+      "inherits": "base",
+      "displayName": "Debug + ASan/UBSan (Homebrew LLVM)",
+      "description": "Apple Clang's ASan runtime hangs at startup on macOS 26; Homebrew LLVM's does not.",
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Darwin"
+      },
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "OPUS_SANITIZE": "address,undefined",
+        "CMAKE_CXX_COMPILER": "/opt/homebrew/opt/llvm/bin/clang++"
+      }
+    },
+    {
+      "name": "verify",
+      "inherits": "base",
+      "displayName": "Debug + clang-tidy",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "OPUS_CLANG_TIDY": "ON"
+      }
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "debug",
+      "configurePreset": "debug"
+    },
+    {
+      "name": "relwithdebinfo",
+      "configurePreset": "relwithdebinfo"
+    },
+    {
+      "name": "release",
+      "configurePreset": "release"
+    },
+    {
+      "name": "minsizerel",
+      "configurePreset": "minsizerel"
+    },
+    {
+      "name": "asan",
+      "configurePreset": "asan"
+    },
+    {
+      "name": "asan-macos",
+      "configurePreset": "asan-macos"
+    },
+    {
+      "name": "verify",
+      "configurePreset": "verify"
+    },
+    {
+      "name": "quick-gates",
+      "configurePreset": "debug",
+      "targets": [
+        "format-check"
+      ]
+    },
+    {
+      "name": "verify-gates",
+      "configurePreset": "verify",
+      "targets": [
+        "format-check",
+        "lint",
+        "docs"
+      ]
+    }
+  ],
+  "testPresets": [
+    {
+      "name": "base",
+      "hidden": true,
+      "output": {
+        "outputOnFailure": true,
+        "shortProgress": true
+      },
+      "execution": {
+        "noTestsAction": "error",
+        "stopOnFailure": false
+      }
+    },
+    {
+      "name": "debug",
+      "inherits": "base",
+      "configurePreset": "debug"
+    },
+    {
+      "name": "relwithdebinfo",
+      "inherits": "base",
+      "configurePreset": "relwithdebinfo"
+    },
+    {
+      "name": "release",
+      "inherits": "base",
+      "configurePreset": "release"
+    },
+    {
+      "name": "minsizerel",
+      "inherits": "base",
+      "configurePreset": "minsizerel"
+    },
+    {
+      "name": "asan",
+      "inherits": "base",
+      "configurePreset": "asan"
+    },
+    {
+      "name": "asan-macos",
+      "inherits": "base",
+      "configurePreset": "asan-macos"
+    },
+    {
+      "name": "verify",
+      "inherits": "base",
+      "configurePreset": "verify"
+    }
+  ],
+  "workflowPresets": [
+    {
+      "name": "quick",
+      "displayName": "Inner loop: format check + Debug build + tests",
+      "steps": [
+        {
+          "type": "configure",
+          "name": "debug"
+        },
+        {
+          "type": "build",
+          "name": "quick-gates"
+        },
+        {
+          "type": "build",
+          "name": "debug"
+        },
+        {
+          "type": "test",
+          "name": "debug"
+        }
+      ]
+    },
+    {
+      "name": "verify",
+      "displayName": "Pre-push: quick + opus-lint + clang-tidy + API docs",
+      "steps": [
+        {
+          "type": "configure",
+          "name": "verify"
+        },
+        {
+          "type": "build",
+          "name": "verify-gates"
+        },
+        {
+          "type": "build",
+          "name": "verify"
+        },
+        {
+          "type": "test",
+          "name": "verify"
+        }
+      ]
+    },
+    {
+      "name": "test-relwithdebinfo",
+      "steps": [
+        {
+          "type": "configure",
+          "name": "relwithdebinfo"
+        },
+        {
+          "type": "build",
+          "name": "relwithdebinfo"
+        },
+        {
+          "type": "test",
+          "name": "relwithdebinfo"
+        }
+      ]
+    },
+    {
+      "name": "test-release",
+      "steps": [
+        {
+          "type": "configure",
+          "name": "release"
+        },
+        {
+          "type": "build",
+          "name": "release"
+        },
+        {
+          "type": "test",
+          "name": "release"
+        }
+      ]
+    },
+    {
+      "name": "test-minsizerel",
+      "steps": [
+        {
+          "type": "configure",
+          "name": "minsizerel"
+        },
+        {
+          "type": "build",
+          "name": "minsizerel"
+        },
+        {
+          "type": "test",
+          "name": "minsizerel"
+        }
+      ]
+    },
+    {
+      "name": "test-asan",
+      "steps": [
+        {
+          "type": "configure",
+          "name": "asan"
+        },
+        {
+          "type": "build",
+          "name": "asan"
+        },
+        {
+          "type": "test",
+          "name": "asan"
+        }
+      ]
+    },
+    {
+      "name": "test-asan-macos",
+      "steps": [
+        {
+          "type": "configure",
+          "name": "asan-macos"
+        },
+        {
+          "type": "build",
+          "name": "asan-macos"
+        },
+        {
+          "type": "test",
+          "name": "asan-macos"
+        }
+      ]
+    },
+    {
+      "name": "test-debug",
+      "steps": [
+        {
+          "type": "configure",
+          "name": "debug"
+        },
+        {
+          "type": "build",
+          "name": "debug"
+        },
+        {
+          "type": "test",
+          "name": "debug"
+        }
+      ]
+    }
+  ]
+}
