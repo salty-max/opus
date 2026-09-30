@@ -25,4 +25,8 @@ WARN_NO_PARAMDOC       = NO
 WARN_AS_ERROR          = FAIL_ON_WARNINGS
 GENERATE_HTML          = YES
 GENERATE_LATEX         = NO
+# Graphs need Graphviz and differ between Doxygen defaults; the gate is about
+# documentation coverage, so they are off everywhere.
+HAVE_DOT               = NO
+CLASS_GRAPH            = NO
 HTML_OUTPUT            = html
