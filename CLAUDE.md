@@ -112,28 +112,34 @@ commit-msg hook and opus-lint reject them; strip them if a tool adds one.
 
 ## Self-review (mandatory before every PR)
 
-An explicit, visible review pass before commit + push, walked step by
-step. Green CI is the floor, not the ceiling.
+This is not optional and it's not a checkbox to write in the PR body. It is
+an explicit visible review pass before commit + push, walked step-by-step.
+The known failure mode is treating green CI as proof of done — green is the
+floor, not the ceiling.
 
 The review is a **loop**: walk all 5 steps, surface every finding, fix or
 escalate, **then walk all 5 steps again from Step 1**. Stop only when a
 complete pass surfaces zero items. A first-try clean pass is suspicious —
 re-read the issue body once more before trusting it.
 
-**Step 1 — re-open the issue body.** Every AC line: ✅ Done (note where in
-the diff), or ❌ Missed (fix it). Deferral needs prior maintainer approval.
+### The 5 steps
 
-**Step 2 — technical gates.** `cmake -P cmake/ci.cmake` green: verify
-(format, opus-lint, clang-tidy, Doxygen, Debug tests) plus RelWithDebInfo,
-Release, MinSizeRel and ASan/UBSan.
+**Step 1 — re-open the issue body.** Every AC line: ✅ Done (note where in
+the diff), ⏭️ Deferred (explicit, with reason + follow-up issue, and only
+with prior maintainer approval), or ❌ Missed (fix it).
+
+**Step 2 — technical gates.** `cmake -P cmake/ci.cmake` clean across all
+build modes: verify (format, opus-lint, clang-tidy, Doxygen, Debug tests)
+plus RelWithDebInfo, Release, MinSizeRel and ASan/UBSan. Lint clean.
 
 **Step 3 — explicit acceptance checks.**
 
-- Public API diff under `engine/include/opus/` — every new declaration
-  intentional, documented, and reachable from `<opus/opus.hpp>`; no
-  `void*`, no exceptions, no owning raw pointers in signatures
-- Docs propagation — new module → `docs/<module>.md`; new convention →
-  CLAUDE.md or `docs/development.md`
+- Public API diff under `engine/include/opus/` (and the barrel
+  `<opus/opus.hpp>`) — every visible declaration intentional, documented,
+  and reachable from the barrel; no `void*`, no owning raw pointers, no
+  catch-all error types in signatures
+- Docs propagation — new module → `docs/<module>.md`; new public export →
+  README / module spec; new convention → CLAUDE.md or `docs/development.md`
 - Changeset present at the right level for `feat` / `fix` / `perf` /
   breaking PRs
 
@@ -147,37 +153,65 @@ Release, MinSizeRel and ASan/UBSan.
   discovery, each in its own commit and named in the PR body)
 
 **Step 5 — code quality.** Read the diff like a reviewer who didn't write
-it:
+it. Look for:
 
-- **Naming** — does each new symbol read right at the call site?
-- **Dead code / duplication** — drop unused helpers; collapse the same
-  shape written three-plus times
-- **Premature abstraction** — every parameter / branch / template has a
-  current caller for every shape it accepts
-- **Comments WHAT vs WHY** — every `//` says why; strip ones that restate
-  the next line
-- **Function size** — split a function that does unrelated things; keep
-  straight-line code whole when its parts have no honest names
-- **Error paths** — every `std::expected` result is handled with a
-  sensible response; every error enumerator is reachable and tested
-- **Test shape** — tests assert behaviour, not incidental implementation
-- **Magic values** — every literal has a name or a comment justifying it
-- **Determinism** — simulation code obeys `docs/determinism.md` beyond
-  what the lint can see (iteration order of your own containers, ties in
-  comparisons, uninitialised padding in hashed state)
+- **Naming** — does each new symbol read right at the call site? Tighten
+  anything that needs surrounding context to make sense.
+- **Dead code / duplication** — drop unused helpers; consolidate if the
+  same shape was written twice (three similar lines beats a premature
+  abstraction, but six identical lines should collapse).
+- **Premature abstraction** — does every new parameter / branch / helper /
+  template have a current caller for every shape it accepts? If a branch
+  is "in case someone wants X later", delete it.
+- **Comments WHAT vs WHY** — every `//` should say WHY, not WHAT. Strip any
+  inline that just restates what the next line does.
+- **Function size** — split a function that does several unrelated
+  things, or branches on multiple state shapes. Length alone isn't the
+  test: straight-line code with one shape (serialization, field-by-field
+  construction) reads fine long, and chopping it into arbitrary halves
+  makes it worse. Ask what the function would be *named* after splitting —
+  if the parts have no honest names, leave it.
+- **Error paths** — every `std::expected` result is handled; the caller has
+  a sensible response to each enumerator of the error set; every
+  enumerator is reachable and tested; no unjustified `.value()` on an
+  unchecked result.
+- **Test shape** — every new test asserts on the actual behavior, not on
+  incidental implementation details that will change on the next refactor.
+- **Magic values** — every literal in the diff has a name or a comment
+  justifying it. No bare `0xFF`, `42`, `0x4000` without context.
+- **Determinism** — simulation code obeys `docs/determinism.md` beyond what
+  the lint can see: iteration order of your own containers, ties in
+  comparisons, uninitialised padding in hashed state.
 
 ### Loop discipline — no David GoodEnough
 
-Every finding gets one of two responses, never "noted in the PR body":
+Every finding from any step gets one of two responses, never "noted in the
+PR body":
 
-- **Fix in this PR.** Default. Then loop back to Step 1.
-- **Escalate to the maintainer with a concrete question** when the fix is
-  genuinely a separate design decision.
+- **Fix in this PR.** Default. Then loop back to Step 1. Whether the finding
+  is a blocker or a nit doesn't change this — there is no scope-reduction
+  tier for things I noticed myself.
+- **Escalate to the maintainer with a concrete question.** Use this when
+  the fix is genuinely a separate design decision (e.g. "the clean fix is
+  to extend the ECS with primitive X — that's its own PR, do I split or
+  absorb?"). Don't escalate to dodge a fix this PR could easily absorb.
 
-Forbidden in the review report: "Findings I chose not to address", "LGTM
-with the following caveats", "Pre-existing drift, out of scope", "Edge
-case, minor". The loop ends in exactly one of: **LGTM** (clean pass) or
-**BLOCKED on <specific question>**.
+**Specifically forbidden** in the review report:
+
+- "Findings I chose not to address" / "Gaps surfaced but skipped"
+- "LGTM with the following caveats"
+- "Belt-and-suspenders, skippable"
+- "Preexisting drift, out of scope"
+- "Edge case, minor"
+- Any phrasing that ships self-noted holes
+
+The loop ends in one of two shapes only:
+
+- **LGTM** — clean pass, zero items, ready to push
+- **BLOCKED on <specific question for maintainer>** — concrete decision
+  needed before continuing
+
+Never a third "LGTM with footnotes" shape.
 
 ---
 
