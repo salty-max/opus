@@ -22,7 +22,9 @@ branch / commit / changeset conventions, and the release flow.
 clang-format and clang-tidy are **pinned to one LLVM major version**
 (`OPUS_LLVM_VERSION` in `cmake/OpusLlvmTools.cmake`, mirrored by
 `LLVM_VERSION` in `ci.yml`): formatting and diagnostics change between
-majors, so configuration fails if only another version is found. The build
+majors, so a tool of another major counts as missing — the `format` targets
+fail with the reason, and `OPUS_CLANG_TIDY=ON` fails configuration. Builds
+that use neither (the test presets) are unaffected. The build
 prefers `clang-tidy-23` / `clang-format-23` (Debian and Ubuntu install these
 next to an older unversioned default), then Homebrew's keg-only LLVM under
 `/opt/homebrew/opt/llvm/bin`, then `PATH`. Bumping LLVM means changing both
