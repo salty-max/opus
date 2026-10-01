@@ -5,7 +5,9 @@ file(GLOB_RECURSE OPUS_TEST_SOURCES CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DI
 
 add_executable(opus-tests main.cpp ${OPUS_TEST_SOURCES})
 target_include_directories(opus-tests PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}")
-target_link_libraries(opus-tests PRIVATE opus::opus doctest::doctest)
+# SDL3::Headers lets the platform specs play the operating system (inject
+# events, take the video driver away); opus-lint keeps SDL out of every other spec.
+target_link_libraries(opus-tests PRIVATE opus::opus doctest::doctest SDL3::Headers)
 opus_apply_compile_options(opus-tests ALLOW_EXCEPTIONS)
 
 doctest_discover_tests(opus-tests)
