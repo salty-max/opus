@@ -5,6 +5,8 @@
 /// whole public API. Games may also include individual module headers.
 
 #include <opus/core/log.hpp>          // IWYU pragma: export
+#include <opus/platform/actions.hpp>  // IWYU pragma: export
+#include <opus/platform/input.hpp>    // IWYU pragma: export
 #include <opus/platform/platform.hpp> // IWYU pragma: export
 #include <opus/platform/window.hpp>   // IWYU pragma: export
 #include <opus/version.hpp>           // IWYU pragma: export
