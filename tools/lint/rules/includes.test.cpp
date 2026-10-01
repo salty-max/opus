@@ -38,10 +38,22 @@ TEST_CASE("check_includes: engine sources may quote private headers") {
     CHECK(findings(check_includes, "engine/src/render/a.cpp", R"(#include "render/internal.hpp")") == none);
 }
 
-TEST_CASE("check_includes: public headers never include SDL") {
+TEST_CASE("check_includes: only engine sources and platform specs include SDL") {
     CHECK(findings(check_includes, "engine/include/opus/platform/window.hpp", "#include <SDL3/SDL.h>") ==
           flagged());
     CHECK(findings(check_includes, "engine/include/opus/platform/window.hpp", R"(#include "SDL3/SDL.h")") ==
           flagged());
+    CHECK(findings(check_includes, "sandbox/main.cpp", "#include <SDL3/SDL.h>") == flagged());
+    CHECK(findings(check_includes, "tests/core/log.test.cpp", "#include <SDL3/SDL.h>") == flagged());
     CHECK(findings(check_includes, "engine/src/platform/window.cpp", "#include <SDL3/SDL.h>") == none);
+    CHECK(findings(check_includes, "tests/platform/window.test.cpp", "#include <SDL3/SDL_events.h>") == none);
+}
+
+TEST_CASE("check_includes: specs may include their own module's util.hpp") {
+    CHECK(findings(check_includes, "tests/platform/window.test.cpp", R"(#include "platform/util.hpp")") ==
+          none);
+    CHECK(findings(check_includes, "tests/platform/util.hpp", R"(#include "util.hpp")") == none);
+    CHECK(findings(check_includes, "tests/core/log.test.cpp", R"(#include "platform/util.hpp")") ==
+          flagged());
+    CHECK(findings(check_includes, "tests/opus.test.cpp", R"(#include "/util.hpp")") == flagged());
 }

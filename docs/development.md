@@ -64,6 +64,7 @@ engine/
 tests/
 ├── main.cpp               # doctest runner
 ├── util.hpp               # shared test helpers
+├── <module>/util.hpp      # helpers for one module's specs
 ├── opus.test.cpp          # barrel smoke test
 └── <module>/<f>.test.cpp  # mirrors engine/{include/opus,src}/<module>/<f>
 sandbox/                   # sample game used during development
@@ -162,7 +163,7 @@ skips them.
 |---|---|---|
 | `comment-content` | everywhere | issue numbers, version / milestone / roadmap markers, change-history narration, AI attribution — in comments |
 | `cast-safety` | everywhere | `reinterpret_cast`, `const_cast`, `std::bit_cast`, `std::launder` without `// safety: <reason>` directly above |
-| `include-path` | everywhere | `#include "../…"`; quoted includes in public headers; SDL includes in public headers; quoted includes other than `"util.hpp"` in `tests/` |
+| `include-path` | everywhere | `#include "../…"`; quoted includes in public headers; SDL includes outside `engine/src/` and `tests/platform/`; quoted includes in `tests/` other than `"util.hpp"` and the spec's own `"<module>/util.hpp"` |
 | `engine-io` | `engine/` | `std::cout`/`cerr`/`print`, `printf`-family output, any `stdout`/`stderr`, `<iostream>`/`<print>` |
 | `raw-memory` | `engine/` | `new`, `delete`, `malloc`/`calloc`/`realloc`/`free` |
 | `determinism` | `ecs`, `sim`, `world`, `rts` | `float`/`double`, libm calls, `std::unordered_*`, clocks, platform RNGs and `<random>` distributions, unstable sorts, and their headers |

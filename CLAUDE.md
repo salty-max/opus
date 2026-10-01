@@ -274,8 +274,10 @@ Never a third "LGTM with footnotes" shape.
   spec mirrors an engine file. Exempt: the barrel (covered by
   `tests/opus.test.cpp`) and `*internal*` files.
 - Naming: `TEST_CASE("<symbol>: <behavior>")` (lint-enforced).
-- Tests include only public headers `<opus/...>` and `"util.hpp"` — shared
-  helpers live in `tests/util.hpp`, don't reinvent per spec.
+- Tests include only public headers `<opus/...>`, `"util.hpp"`, and their
+  own module's `"<module>/util.hpp"` — shared helpers live there, don't
+  reinvent per spec. The one exception: platform specs (`tests/platform/`)
+  may include SDL, to play the operating system.
 - Tools under `tools/` keep their specs next to their sources; the CMake
   glob compiles every `*.test.cpp` it finds, so none can exist unrun.
 - **Coverage isn't a target; failure paths are.** Happy path + at least one
