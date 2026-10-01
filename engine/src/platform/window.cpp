@@ -1,3 +1,4 @@
+#include <opus/platform/platform.hpp>
 #include <opus/platform/window.hpp>
 
 #include "platform/window_internal.hpp"
@@ -40,6 +41,21 @@ float display_scale_of(WindowId id) {
     SDL_Window* window = sdl_window(id);
     // SDL reports 0 on failure; so does a window that no longer exists.
     return window == nullptr ? 0.0F : SDL_GetWindowDisplayScale(window);
+}
+
+Cursor cursor_at(WindowId id, Point position) {
+    const Size logical = logical_size_of(id);
+    const Size pixels = pixel_size_of(id);
+    // A window that is gone, or has no area, keeps the two systems equal.
+    const float scale_x =
+        logical.width > 0 ? static_cast<float>(pixels.width) / static_cast<float>(logical.width) : 1.0F;
+    const float scale_y =
+        logical.height > 0 ? static_cast<float>(pixels.height) / static_cast<float>(logical.height) : 1.0F;
+    return {
+        .window = id,
+        .position = position,
+        .pixel_position = {.x = position.x * scale_x, .y = position.y * scale_y},
+    };
 }
 
 } // namespace detail

@@ -12,7 +12,6 @@
 
 #include <format>
 #include <string>
-#include <type_traits>
 #include <utility>
 #include <variant>
 
@@ -44,30 +43,64 @@ inline SDL_Window* sdl_window(const Window& window) {
 
 } // namespace opus::test
 
+namespace opus::test::detail {
+
+inline std::string text(Size s) {
+    return std::format("{}x{}", s.width, s.height);
+}
+inline std::string text(Point p) {
+    return std::format("({}, {})", p.x, p.y);
+}
+inline std::uint32_t text(WindowId w) {
+    return static_cast<std::uint32_t>(w);
+}
+inline std::string text(const Cursor& c) {
+    return std::format("{{{}, {}, {}}}", text(c.window), text(c.position), text(c.pixel_position));
+}
+inline std::string text(const QuitRequested& /*event*/) {
+    return "QuitRequested{}";
+}
+inline std::string text(const WindowCloseRequested& e) {
+    return std::format("WindowCloseRequested{{{}}}", text(e.window));
+}
+inline std::string text(const WindowResized& e) {
+    return std::format("WindowResized{{{}, {}, {}}}", text(e.window), text(e.logical_size),
+                       text(e.pixel_size));
+}
+inline std::string text(const WindowScaleChanged& e) {
+    return std::format("WindowScaleChanged{{{}, {}}}", text(e.window), e.display_scale);
+}
+inline std::string text(const KeyPressed& e) {
+    return std::format("KeyPressed{{{}}}", static_cast<int>(e.key));
+}
+inline std::string text(const KeyReleased& e) {
+    return std::format("KeyReleased{{{}}}", static_cast<int>(e.key));
+}
+inline std::string text(const MouseButtonPressed& e) {
+    return std::format("MouseButtonPressed{{{}, {}}}", static_cast<int>(e.button), text(e.cursor));
+}
+inline std::string text(const MouseButtonReleased& e) {
+    return std::format("MouseButtonReleased{{{}, {}}}", static_cast<int>(e.button), text(e.cursor));
+}
+inline std::string text(const MouseMoved& e) {
+    return std::format("MouseMoved{{{}}}", text(e.cursor));
+}
+inline std::string text(const MouseWheel& e) {
+    return std::format("MouseWheel{{{}, {}}}", text(e.window), text(e.delta));
+}
+inline std::string text(const CursorEntered& e) {
+    return std::format("CursorEntered{{{}}}", text(e.window));
+}
+inline std::string text(const CursorLeft& e) {
+    return std::format("CursorLeft{{{}}}", text(e.window));
+}
+
+} // namespace opus::test::detail
+
 /// Prints platform events in failed checks, e.g. `WindowResized{3, 800x600, 800x600}`.
 template <> struct doctest::StringMaker<opus::Event> {
     static doctest::String convert(const opus::Event& event) {
-        const auto size = [](opus::Size s) {
-            return std::format("{}x{}", s.width, s.height);
-        };
-        const auto id = [](opus::WindowId w) {
-            return static_cast<std::uint32_t>(w);
-        };
-        const std::string text = std::visit(
-            [&](const auto& e) -> std::string {
-                using E = std::decay_t<decltype(e)>;
-                if constexpr (std::is_same_v<E, opus::QuitRequested>) {
-                    return "QuitRequested{}";
-                } else if constexpr (std::is_same_v<E, opus::WindowCloseRequested>) {
-                    return std::format("WindowCloseRequested{{{}}}", id(e.window));
-                } else if constexpr (std::is_same_v<E, opus::WindowResized>) {
-                    return std::format("WindowResized{{{}, {}, {}}}", id(e.window), size(e.logical_size),
-                                       size(e.pixel_size));
-                } else {
-                    return std::format("WindowScaleChanged{{{}, {}}}", id(e.window), e.display_scale);
-                }
-            },
-            event);
+        const std::string text = std::visit([](const auto& e) { return opus::test::detail::text(e); }, event);
         return {text.c_str()};
     }
 };

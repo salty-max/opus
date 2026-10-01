@@ -6,6 +6,9 @@
 #include <SDL3/SDL_events.h>
 #include <SDL3/SDL_hints.h>
 #include <SDL3/SDL_init.h>
+#include <SDL3/SDL_mouse.h>
+#include <SDL3/SDL_scancode.h>
+#include <SDL3/SDL_stdinc.h>
 #include <SDL3/SDL_video.h>
 
 #include <doctest/doctest.h>
@@ -15,9 +18,21 @@
 #include <utility>
 #include <vector>
 
+using opus::Cursor;
+using opus::CursorEntered;
+using opus::CursorLeft;
 using opus::Event;
+using opus::Key;
+using opus::KeyPressed;
+using opus::KeyReleased;
+using opus::MouseButton;
+using opus::MouseButtonPressed;
+using opus::MouseButtonReleased;
+using opus::MouseMoved;
+using opus::MouseWheel;
 using opus::Platform;
 using opus::PlatformError;
+using opus::Point;
 using opus::QuitRequested;
 using opus::Size;
 using opus::Window;
@@ -49,6 +64,43 @@ void push_window_event(SDL_EventType type, WindowId window) {
     event.window.windowID = static_cast<SDL_WindowID>(window);
     REQUIRE(SDL_PushEvent(&event));
 }
+
+void push_key(SDL_Scancode scancode, bool down, bool repeat = false) {
+    SDL_Event event{};
+    event.key.type = down ? SDL_EVENT_KEY_DOWN : SDL_EVENT_KEY_UP;
+    event.key.scancode = scancode;
+    event.key.down = down;
+    event.key.repeat = repeat;
+    REQUIRE(SDL_PushEvent(&event));
+}
+
+void push_mouse_button(const Window& window, Uint8 button, bool down, Point at) {
+    SDL_Event event{};
+    event.button.type = down ? SDL_EVENT_MOUSE_BUTTON_DOWN : SDL_EVENT_MOUSE_BUTTON_UP;
+    event.button.windowID = static_cast<SDL_WindowID>(window.id());
+    event.button.button = button;
+    event.button.down = down;
+    event.button.x = at.x;
+    event.button.y = at.y;
+    REQUIRE(SDL_PushEvent(&event));
+}
+
+void push_wheel(const Window& window, Point delta, SDL_MouseWheelDirection direction) {
+    SDL_Event event{};
+    event.wheel.type = SDL_EVENT_MOUSE_WHEEL;
+    event.wheel.windowID = static_cast<SDL_WindowID>(window.id());
+    event.wheel.x = delta.x;
+    event.wheel.y = delta.y;
+    event.wheel.direction = direction;
+    REQUIRE(SDL_PushEvent(&event));
+}
+
+// On the dummy display window coordinates and pixels coincide.
+Cursor cursor_at(const Window& window, Point at) {
+    return {.window = window.id(), .position = at, .pixel_position = at};
+}
+
+constexpr Point click_point{.x = 12.5F, .y = 40.0F};
 
 void resize(const Window& window, Size size) {
     REQUIRE(SDL_SetWindowSize(sdl_window(window), size.width, size.height));
@@ -224,6 +276,93 @@ TEST_CASE("Platform::poll_events: ignores events it does not translate") {
     Platform platform = headless_platform();
     const Window window = make_window(platform);
     static_cast<void>(poll(platform));
-    push_window_event(SDL_EVENT_WINDOW_MOUSE_ENTER, window.id());
+    push_window_event(SDL_EVENT_WINDOW_SHOWN, window.id());
     CHECK(poll(platform).empty());
+}
+
+TEST_CASE("Platform::poll_events: reports key presses and releases by physical key") {
+    Platform platform = headless_platform();
+    static_cast<void>(poll(platform));
+    push_key(SDL_SCANCODE_Q, true);
+    push_key(SDL_SCANCODE_Q, false);
+    push_key(SDL_SCANCODE_KP_ENTER, true);
+    CHECK(poll(platform) == std::vector<Event>{KeyPressed{.key = Key::Q}, KeyReleased{.key = Key::Q},
+                                               KeyPressed{.key = Key::KeypadEnter}});
+}
+
+TEST_CASE("Platform::poll_events: drops auto-repeat and keys without a Key") {
+    Platform platform = headless_platform();
+    static_cast<void>(poll(platform));
+    push_key(SDL_SCANCODE_W, true, true);
+    push_key(SDL_SCANCODE_MEDIA_PLAY, true);
+    CHECK(poll(platform).empty());
+}
+
+TEST_CASE("Platform::poll_events: reports mouse buttons with their cursor") {
+    Platform platform = headless_platform();
+    const Window window = make_window(platform);
+    static_cast<void>(poll(platform));
+    push_mouse_button(window, SDL_BUTTON_RIGHT, true, click_point);
+    push_mouse_button(window, SDL_BUTTON_X2, false, click_point);
+    CHECK(poll(platform) ==
+          std::vector<Event>{
+              MouseButtonPressed{.button = MouseButton::Right, .cursor = cursor_at(window, click_point)},
+              MouseButtonReleased{.button = MouseButton::X2, .cursor = cursor_at(window, click_point)},
+          });
+}
+
+TEST_CASE("Platform::poll_events: drops mouse buttons beyond the five named ones") {
+    Platform platform = headless_platform();
+    const Window window = make_window(platform);
+    static_cast<void>(poll(platform));
+    constexpr Uint8 sixth_button = 6;
+    push_mouse_button(window, sixth_button, true, click_point);
+    CHECK(poll(platform).empty());
+}
+
+TEST_CASE("Platform::poll_events: reports cursor motion in both coordinate systems") {
+    Platform platform = headless_platform();
+    const Window window = make_window(platform);
+    static_cast<void>(poll(platform));
+    SDL_WarpMouseInWindow(sdl_window(window), click_point.x, click_point.y);
+    const std::vector<Event> events = poll(platform);
+    REQUIRE_FALSE(events.empty());
+    CHECK(events.back() == Event{MouseMoved{.cursor = cursor_at(window, click_point)}});
+}
+
+TEST_CASE("Platform::poll_events: normalises the wheel so positive y scrolls away from the user") {
+    Platform platform = headless_platform();
+    const Window window = make_window(platform);
+    static_cast<void>(poll(platform));
+    push_wheel(window, {.x = 0.0F, .y = 1.0F}, SDL_MOUSEWHEEL_NORMAL);
+    push_wheel(window, {.x = 0.0F, .y = -1.0F}, SDL_MOUSEWHEEL_FLIPPED);
+    CHECK(poll(platform) == std::vector<Event>{
+                                MouseWheel{.window = window.id(), .delta = {.x = 0.0F, .y = 1.0F}},
+                                MouseWheel{.window = window.id(), .delta = {.x = 0.0F, .y = 1.0F}},
+                            });
+}
+
+TEST_CASE("Platform::poll_events: reports the cursor entering and leaving a window") {
+    Platform platform = headless_platform();
+    const Window window = make_window(platform);
+    static_cast<void>(poll(platform));
+    push_window_event(SDL_EVENT_WINDOW_MOUSE_ENTER, window.id());
+    push_window_event(SDL_EVENT_WINDOW_MOUSE_LEAVE, window.id());
+    CHECK(poll(platform) ==
+          std::vector<Event>{CursorEntered{.window = window.id()}, CursorLeft{.window = window.id()}});
+}
+
+TEST_CASE("Platform::key_label: names a key by its label on the current layout") {
+    const Platform platform = headless_platform();
+    // The dummy driver uses the US layout, where positions and labels agree.
+    CHECK(platform.key_label(Key::Q) == "Q");
+    CHECK(platform.key_label(Key::LeftShift) == "Left Shift");
+    CHECK(platform.key_label(Key::Unknown).empty());
+}
+
+TEST_CASE("Platform::key_label: is empty on a moved-from platform") {
+    Platform source = headless_platform();
+    const Platform target = std::move(source);
+    // NOLINTNEXTLINE(bugprone-use-after-move,clang-analyzer-cplusplus.Move) moved-from state under test
+    CHECK(source.key_label(Key::Q).empty());
 }
