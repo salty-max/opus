@@ -65,7 +65,7 @@
       "name": "asan-macos",
       "inherits": "base",
       "displayName": "Debug + ASan/UBSan (Homebrew LLVM)",
-      "description": "Apple Clang's ASan runtime hangs at startup on macOS 26; Homebrew LLVM's does not.",
+      "description": "Apple Clang's ASan runtime hangs at startup on macOS 26, so this lane uses Homebrew LLVM. Its Objective-C class selector stubs need a newer linker than Xcode's, so they are off.",
       "condition": {
         "type": "equals",
         "lhs": "${hostSystemName}",
@@ -74,7 +74,8 @@
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Debug",
         "OPUS_SANITIZE": "address,undefined",
-        "CMAKE_CXX_COMPILER": "/opt/homebrew/opt/llvm/bin/clang++"
+        "CMAKE_CXX_COMPILER": "/opt/homebrew/opt/llvm/bin/clang++",
+        "CMAKE_OBJC_FLAGS": "-fno-objc-msgsend-class-selector-stubs"
       }
     },
     {
