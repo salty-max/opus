@@ -48,7 +48,10 @@ directory. Point clangd at `build/debug` (or symlink
 **Apple Clang ASan on macOS 26.** Apple Clang 17's AddressSanitizer
 runtime hangs at startup on macOS 26 — even for an empty `main`. The
 sanitizer lane on macOS therefore builds with Homebrew LLVM (the
-`asan-macos` preset); `cmake/ci.cmake` picks it automatically.
+`asan-macos` preset); `cmake/ci.cmake` picks it automatically. Homebrew
+Clang emits Objective-C class selector stubs (`objc_msgSendClass$…`) that
+Xcode's linker cannot resolve, so the preset compiles SDL's Cocoa backend
+with `-fno-objc-msgsend-class-selector-stubs`.
 
 ---
 
